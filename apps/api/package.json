@@ -1,6 +1,10 @@
 {
-  "name": "api",
+  "name": "hono-better-auth-api",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/lib/auth.ts"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
