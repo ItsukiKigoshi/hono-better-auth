@@ -1,0 +1,14 @@
+{
+  "name": "hono-better-auth",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev:api": "bun --filter book-log-api dev",
+    "dev:app": "bun --filter book-log-app dev",
+    "dev": "bun --filter \"*\" dev"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "private": true
+}
