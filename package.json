@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "dev:api": "bun --filter book-log-api dev",
-    "dev:app": "bun --filter book-log-app dev",
+    "dev:api": "bun --filter hono-better-auth-api dev",
+    "dev:app": "bun --filter hono-better-auth-app dev",
     "dev": "bun --filter \"*\" dev"
   },
   "workspaces": [

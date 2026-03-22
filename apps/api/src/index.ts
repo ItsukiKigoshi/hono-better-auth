@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, or } from 'drizzle-orm';
 import { getAuth } from './lib/auth';
+import {cors} from 'hono/cors';
 import { user, notes } from './db/schema';
 
 type Bindings = {
@@ -57,5 +58,13 @@ app.get("/u/:username/notes", async (c) => {
 
   return c.json(results);
 });
+
+
+app.use('*', cors({
+  origin: [
+    'http://localhost:5173',
+  ],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+}));
 
 export default app;
