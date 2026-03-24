@@ -10,5 +10,12 @@
   "workspaces": [
     "apps/*"
   ],
-  "private": true
+  "private": true,
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "wrangler": "^4.77.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
+  }
 }

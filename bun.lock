@@ -4,6 +4,13 @@
   "workspaces": {
     "": {
       "name": "hono-better-auth",
+      "dependencies": {
+        "drizzle-orm": "^0.45.1",
+        "wrangler": "^4.77.0",
+      },
+      "devDependencies": {
+        "drizzle-kit": "^0.31.10",
+      },
     },
     "apps/api": {
       "name": "hono-better-auth-api",

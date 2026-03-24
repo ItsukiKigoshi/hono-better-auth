@@ -62,7 +62,7 @@ export default function SignIn() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Username"
+            placeholder="Your Name"
             required
           />
         )}
