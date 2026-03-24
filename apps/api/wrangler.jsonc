@@ -1,25 +1,25 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
+	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "hono-better-auth",
 	"main": "src/index.ts",
 	"compatibility_flags": [
-    "nodejs_compat"
-  ],
+		"nodejs_compat"
+	],
 	"compatibility_date": "2026-03-24",
-  "d1_databases": [
-  		{
- 			"binding": "hono_better_auth_db",
- 			"database_name": "hono-better-auth-db",
- 			"database_id": "5113ae39-19b2-49d7-883d-d562d7eae8f1",
- 			"migrations_dir": "drizzle"
-  		}
-  ],
-  "vars": {
-    // For all environment
-    // For Production, add API_URL and APP_URL in Workers Setting
-     "API_URL": "http://localhost:8787",
-     "APP_URL": "http://localhost:5173"
-   },
+	"d1_databases": [
+		{
+			"binding": "hono_better_auth_db",
+			"database_name": "hono-better-auth-db",
+			"database_id": "d6e23cef-29d9-4d58-b69d-b49cce0c0d0e",
+			"migrations_dir": "drizzle"
+		}
+	],
+	"vars": {
+		// For all environment
+		// For Production, add API_URL and APP_URL in Workers Setting
+		"API_URL": "http://localhost:8787",
+		"APP_URL": "http://localhost:5173"
+	},
 	// "vars": {
 	//   "MY_VAR": "my-variable"
 	// },
