@@ -3,7 +3,8 @@
 This is an example full-stack monorepo app for authentication with Email OTP + Passkey (Password-less).
 
 ## Spec
-- Runtime/Package Manager: Bun
+- Package Manager: Pnpm
+  - Tried Bun, but caught Node.js compatibility issues with wranglar
 - API: Hono
   - ORM: Drizzle-ORM
   - DB: Cloudflare D1 (SQLite on Local Environment)
@@ -19,11 +20,29 @@ Step-by-Step!
 ---
 
 ## What's Done
+### Configure package.json in project root for monorepo
+```jsonc:package.json
+{
+  "name": "hono-better-auth",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev:api": "pnpm--filter hono-better-auth-api dev",
+    "dev:app": "pnpm--filter hono-better-auth-app dev",
+    "dev": "pnpm--filter \"*\" dev"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "private": true
+}
+```
+
 
 ### API
 #### Initialisation
 ```bash
-bun create hono@latest apps/api
+pnpm create hono@latest apps/api
 # create-hono version 0.19.4
 # ✔ Using target directory … apps/api
 # ✔ Which template do you want to use? cloudflare-workers
@@ -48,8 +67,8 @@ Database is required for user management by BetterAuth.
 https://orm.drizzle.team/docs/get-started/d1-new
 
 ```bash
-bun add drizzle-orm wrangler dotenv @libsql/client
-bun add -D drizzle-kit tsx @types/bun
+pnpm add drizzle-orm wrangler dotenv @libsql/client
+pnpm add -D drizzle-kit tsx @types/node
 ```
 
 Create Database Schema.
@@ -77,7 +96,7 @@ echo "LOCAL_DB_PATH=$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -typ
 ```apps/api/drizzle.config.ts
 // apps/api/drizzle.config.ts
 
-// import 'dotenv/config'; // Bun does not require dotenv https://bun.com/docs/runtime/environment-variables#dotenv
+import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
@@ -100,7 +119,7 @@ Update Database based on schema
 bunx drizzle-kit push
 ```
 
-#### Add Bette-Auth
+#### Initialise Bette-Auth
 
 Follow the steps indicated here:
 https://better-auth.com/docs/installation
@@ -164,3 +183,42 @@ bunx drizzle-kit studio
 ```
 You can see tables like "account", "session", etc.
 
+#### Add emailAndPassword Option in BetterAuth
+
+```ts:apps/api/src/lib/auth.ts
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { drizzle } from "drizzle-orm/libsql";
+import { createClient } from "@libsql/client";
+
+const client = createClient({
+  url: `file:${process.env.LOCAL_DB_PATH!}`,
+});
+
+const db = drizzle(client);
+
+export const auth = betterAuth({
+    database: drizzleAdapter(db, {
+        provider: "sqlite",
+    }),
+    // Add emailAndPassword Option Here
+    emailAndPassword: {
+      enabled: true,
+    },
+});
+```
+
+```ts:apps/api/src/index.ts
+import { Hono } from 'hono'
+import { auth } from "./lib/auth"; 
+
+const app = new Hono()
+
+app.get('/', (c) => {
+  return c.text('Hello Hono!')
+})
+
+app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+
+export default app
+```
