@@ -14,12 +14,6 @@
 			"migrations_dir": "drizzle"
 		}
 	],
-	"vars": {
-		// For all environment
-		// For Production, add API_URL and APP_URL in Workers Setting
-		"API_URL": "http://localhost:8787",
-		"APP_URL": "http://localhost:5173"
-	},
 	// "vars": {
 	//   "MY_VAR": "my-variable"
 	// },
