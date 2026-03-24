@@ -8,6 +8,8 @@ import { favoritesTable } from "./db/schema"
 const app = new Hono<{ Bindings: Required<Env> }>() 
 
 app.use('*', async (c, next) => {
+  console.log("Origin allowed:", c.env.APP_URL); 
+  
   const corsMiddleware = cors({
     origin: c.env.APP_URL,
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
