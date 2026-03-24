@@ -355,77 +355,9 @@ export const authClient = createAuthClient({
 });
 ```
 
-```ts:apps/app/app/routes/signup.tsx
-// apps/app/app/routes/signup.tsx
-import { Form } from "react-router"
-import { useState } from "react"
-import { authClient } from "~/lib/auth"
-
-export default function SignUp() {
-  const [email, setEmail] = useState("")
-  const [name, setName] = useState("")
-  const [password, setPassword] = useState("")
-
-  const signUp = async () => {
-    await authClient.signUp.email(
-      {
-        email,
-        password,
-        name,
-      },
-      {
-        onRequest: (ctx) => {
-          // show loading state
-        },
-        onSuccess: (ctx) => {
-          // redirect to home
-        },
-        onError: (ctx) => {
-          alert(ctx.error)
-        },
-      },
-    )
-  }
-
-  return (
-    <div>
-      <h2>
-        Sign Up
-      </h2>
-      <Form
-        onSubmit={signUp}
-      >
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name"
-        />
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-        />
-        <button
-          type="submit"
-        >
-          Sign Up
-        </button>
-      </Form>
-    </div>
-  )
-}
-```
-
 ```ts:apps/app/app/routes/signin.tsx
 // apps/app/app/routes/signin.tsx
+
 import { Form } from "react-router"
 import { useState } from "react"
 import { authClient } from "~/lib/auth"
@@ -433,53 +365,98 @@ import { authClient } from "~/lib/auth"
 export default function SignIn() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [name, setName] = useState("")
+  const [isNewUser, setIsNewUser] = useState(false)
 
-  const signIn = async () => {
-    await authClient.signIn.email(
-      {
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (isNewUser) {
+      await authClient.signUp.email({
         email,
         password,
-      },
-      {
-        onRequest: (ctx) => {
-          // show loading state
-        },
-        onSuccess: (ctx) => {
-          // redirect to home
-        },
+        name,
+      }, {
+        onSuccess: () => alert("Account created successfully!"),
+        onError: (ctx) => alert(ctx.error.message),
+      })
+    } else {
+      await authClient.signIn.email({
+        email,
+        password,
+      }, {
         onError: (ctx) => {
-          alert(ctx.error)
+          if (ctx.error.status === 401 || ctx.error.code === "USER_NOT_FOUND") {
+            setIsNewUser(true)
+            alert("Account not found. Please enter your name to sign up.")
+          } else {
+            alert(ctx.error.message)
+          }
         },
-      },
-    )
+      })
+    }
   }
 
   return (
     <div>
-      <h2>
-        Sign In
-      </h2>
-      <Form
-        onSubmit={signIn}
-      >
+      <h2>{isNewUser ? "Sign Up" : "Sign In"}</h2>
+      
+      <Form onSubmit={handleAuth}>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
+          required
         />
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
+          required
         />
-        <button
-          type="submit"
-        >
-          Sign In
+        
+        {isNewUser && (
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Username"
+            required
+          />
+        )}
+
+        <button type="submit" style={{ display: "block", marginTop: "10px" }}>
+          {isNewUser ? "Create Account" : "Sign In"}
         </button>
       </Form>
+
+      <div style={{ marginTop: "15px", fontSize: "0.9em" }}>
+        {isNewUser ? (
+          <p>
+            Already have an account?{" "}
+            <button 
+              type="button"
+              onClick={() => setIsNewUser(false)} 
+              style={{ background: "none", border: "none", color: "blue", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Sign In here
+            </button>
+          </p>
+        ) : (
+          <p>
+            Don't have an account?{" "}
+            <button 
+              type="button"
+              onClick={() => setIsNewUser(true)} 
+              style={{ background: "none", border: "none", color: "blue", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Sign Up here
+            </button>
+          </p>
+        )}
+      </div>
     </div>
   )
 }
@@ -487,14 +464,36 @@ export default function SignIn() {
 
 ```tsx:apps/app/app/welcome/welcome.tsx
 // apps/app/app/welcome/welcome.tsx
+
 import SignIn from "~/routes/signin";
-import SignUp from "~/routes/signup";
+import { authClient } from "~/lib/auth";
 
 export function Welcome() {
+  const { data: session, isPending } = authClient.useSession();
+
+  const handleSignOut = async () => {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+        },
+      },
+    });
+  };
+
+  if (isPending) return <div style={{ maxWidth: "300px", margin: "20px auto" }}>Loading...</div>;
+
   return (
-    <main>
-      <SignUp />
-      <SignIn />
+    <main style={{ maxWidth: "300px", margin: "20px auto" }}>
+      {session ? (
+        <div>
+          <p>Hi {session.user.name}! You're logged in.</p>
+          <button onClick={handleSignOut}>Sign Out</button>
+        </div>
+      ) : (
+        <div>
+          <SignIn />
+        </div>
+      )}
     </main>
   );
 }
@@ -508,5 +507,5 @@ bunx wrangler d1 migrations apply hono-better-auth-db --local
 
 
 ### Rabbit Holes (引っかかったポイントたち)
-- dotenv package is not compatible with　wrangler
-  - https://developers.cloudflare.com/workers/configuration/environment-variables/#local-development-with-secrets
+  - dotenv package is not compatible with　wrangler
+    - https://developers.cloudflare.com/workers/configuration/environment-variables/#local-development-with-secrets
