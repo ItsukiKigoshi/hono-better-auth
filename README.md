@@ -513,3 +513,181 @@ bunx wrangler d1 migrations apply hono-better-auth-db --local
 ```
 
 ### Optimise for production
+
+Add the lines
+```jsonc:apps/api/wrangler.jsonc
+// apps/api/wrangler.jsonc
+
+  "vars": {
+    // For all environment
+    // For Production, add API_URL and APP_URL in Workers Setting
+     "API_URL": "http://localhost:8787",
+     "APP_URL": "http://localhost:5173"
+   },
+```
+
+Generate types again
+```bash
+cd apps/api && bunx wrangler types
+```
+
+```ts:apps/api/src/lib/auth.ts
+// apps/api/src/lib/auth.ts
+
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "../db/auth-schema";
+
+export const getAuth = (env: Env) => {
+  return betterAuth({
+    database: drizzleAdapter(drizzle(env.hono_better_auth_db!!, { schema }), {
+      provider: "sqlite",
+      schema: schema,
+    }),
+    emailAndPassword: {
+      enabled: true,
+    },
+    // Rewrite for Production
+    baseURL: `${env.API_URL}/api/auth`,
+    trustedOrigins: [env.APP_URL],
+  });
+};
+```
+
+```ts:apps/api/src/index.ts
+// apps/api/src/index.ts
+
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import { eq } from "drizzle-orm"
+import { drizzle } from "drizzle-orm/d1"
+import { getAuth } from "./lib/auth"
+import { favoritesTable } from "./db/schema"
+
+const app = new Hono<{ Bindings: Required<Env> }>() 
+
+app.use('*', async (c, next) => {
+  const corsMiddleware = cors({
+    origin: c.env.APP_URL,
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  })
+  return corsMiddleware(c, next)
+})
+
+app.get('/', (c) => c.text('Hono-Better-Auth-API'))
+
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
+  const auth = getAuth(c.env);
+  return auth.handler(c.req.raw);
+});
+
+app.get("/favorites", async (c) => {
+  const db = drizzle(c.env.hono_better_auth_db);
+  const auth = getAuth(c.env);
+  
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) return c.json({ error: "Unauthorized" }, 401);
+
+  const list = await db.select()
+    .from(favoritesTable)
+    .where(eq(favoritesTable.userId, session.user.id));
+    
+  return c.json(list);
+});
+
+app.post("/favorites", async (c) => {
+  const db = drizzle(c.env.hono_better_auth_db);
+  const auth = getAuth(c.env);
+  
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) return c.json({ error: "Unauthorized" }, 401);
+
+  const { airlineName } = await c.req.json();
+  
+  const result = await db.insert(favoritesTable).values({
+    userId: session.user.id,
+    airlineName: airlineName,
+  }).returning();　
+  
+  return c.json({ success: true, data: result[0] });
+});
+
+export default app;
+```
+
+```ts:apps/app/app/lib/auth.ts
+// apps/app/app/lib/auth.ts
+
+import { createAuthClient } from "better-auth/react";
+
+const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8787";
+
+export const authClient = createAuthClient({
+    baseURL: `${baseURL}/api/auth`
+});
+```
+
+```tsx:apps/app/app/welcome/welcome.tsx
+// apps/app/app/welcome/welcome.tsx
+
+import { useState, useEffect } from "react";
+import { authClient } from "~/lib/auth";
+import SignIn from "~/routes/signin";
+
+const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8787";
+
+export function Welcome() {
+  const { data: session } = authClient.useSession();
+  const [favorites, setFavorites] = useState<{id: number, airlineName: string}[]>([]);
+  const [input, setInput] = useState("");
+
+  const fetchFavorites = async () => {
+    const res = await fetch(`${baseURL}/favorites`, {
+      headers: { Authorization: `Bearer ${session?.session.token}` },
+      credentials: "include", 
+    });
+    const data = await res.json();
+    setFavorites(data);
+  };
+
+
+  const addFavorite = async () => {
+    if (!input) return;
+    await fetch(`${baseURL}/favorites`, {
+      method: "POST",
+      body: JSON.stringify({ airlineName: input }),
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", 
+    });
+    setInput("");
+    fetchFavorites();
+  };
+
+  useEffect(() => { if (session) fetchFavorites(); }, [session]);
+
+  return (
+    <main style={{ maxWidth: "300px", margin: "20px auto" }}>
+      {session ? (
+        <div>
+          <h3>My Favorite Aviations</h3>
+          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="CPA, AFR, etc." />
+          <button onClick={addFavorite}>Add</button>
+
+          <ul>
+            {favorites?.map(f => (
+              <li key={f.id}>{f.airlineName}</li>
+            ))}
+          </ul>
+          
+          <button onClick={() => authClient.signOut()}>Sign Out</button>
+        </div>
+      ) : (
+        <SignIn/>
+      )}
+    </main>
+  );
+}
+```

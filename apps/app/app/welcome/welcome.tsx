@@ -2,14 +2,15 @@ import { useState, useEffect } from "react";
 import { authClient } from "~/lib/auth";
 import SignIn from "~/routes/signin";
 
+const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8787";
+
 export function Welcome() {
   const { data: session } = authClient.useSession();
   const [favorites, setFavorites] = useState<{id: number, airlineName: string}[]>([]);
   const [input, setInput] = useState("");
 
-
   const fetchFavorites = async () => {
-    const res = await fetch("http://localhost:8787/favorites", {
+    const res = await fetch(`${baseURL}/favorites`, {
       headers: { Authorization: `Bearer ${session?.session.token}` },
       credentials: "include", 
     });
@@ -17,10 +18,9 @@ export function Welcome() {
     setFavorites(data);
   };
 
-
   const addFavorite = async () => {
     if (!input) return;
-    await fetch("http://localhost:8787/favorites", {
+    await fetch(`${baseURL}/favorites`, {
       method: "POST",
       body: JSON.stringify({ airlineName: input }),
       headers: { "Content-Type": "application/json" },
