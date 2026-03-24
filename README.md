@@ -23,6 +23,7 @@ Step-by-Step!
 ## What's Done
 ### Configure package.json in project root for monorepo
 ```jsonc:package.json
+// package.json
 {
   "name": "hono-better-auth",
   "version": "1.0.0",
@@ -59,6 +60,7 @@ cd apps/api
 Update Package.json for each project to match package.json in project root
 Also, configure ``bun dev`` to run locally by default
 ```jsonc:apps/api/package.json
+// apps/api/package.json
 {
   "name": "hono-better-auth-api",
   "type": "module",
@@ -278,6 +280,7 @@ export default app;
 
 Add Node.js compatability flag (did not work w/o this option)
 ```jsonc:apps/api/wrangler.jsonc
+// apps/api/wrangler.jsonc
 {
   // ...
  "compatibility_flags": [
@@ -309,6 +312,7 @@ cd apps/app
 
 Update Package.json for each project to match package.json in project root
 ```jsonc:apps/app/package.json
+// apps/app/package.json
 {
   "name": "hono-better-auth-app",
 // ...
@@ -337,6 +341,7 @@ export const authClient = createAuthClient({
 ```
 
 ```ts:apps/app/app/routes/signup.tsx
+// apps/app/app/routes/signup.tsx
 import { Form } from "react-router"
 import { useState } from "react"
 import { authClient } from "~/lib/auth"
@@ -405,6 +410,7 @@ export default function SignUp() {
 ```
 
 ```ts:apps/app/app/routes/signin.tsx
+// apps/app/app/routes/signin.tsx
 import { Form } from "react-router"
 import { useState } from "react"
 import { authClient } from "~/lib/auth"
@@ -465,6 +471,7 @@ export default function SignIn() {
 ```
 
 ```tsx:apps/app/app/welcome/welcome.tsx
+// apps/app/app/welcome/welcome.tsx
 import SignIn from "~/routes/signin";
 import SignUp from "~/routes/signup";
 
