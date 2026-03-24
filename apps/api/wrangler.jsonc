@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-	"name": "api",
+	"name": "hono-better-auth-api",
 	"main": "src/index.ts",
 	"compatibility_flags": [
     "nodejs_compat"
