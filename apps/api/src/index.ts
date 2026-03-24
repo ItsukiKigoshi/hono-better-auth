@@ -1,12 +1,17 @@
 import { Hono } from 'hono'
-import { auth } from "./lib/auth"; 
+import { cors } from 'hono/cors'
+import { getAuth } from "./lib/auth";  
 
-const app = new Hono()
+const app = new Hono<{ Bindings: { DB: D1Database } }>()
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+app.use("/api/auth/*", cors({
+  origin: "http://localhost:5173",
+  credentials: true,
+}))
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
+  const auth = getAuth(c.env.DB);
+  return auth.handler(c.req.raw);
+});
 
-export default app
+export default app; 

@@ -15,6 +15,7 @@ Step-by-Step!
 - [ ] Email + Password with Better-Auth
 - [ ] Passkey with Better-Auth
 - [ ] Conditional Rendering with Better-Auth
+- [ ] Share Drizzle Schema across frontend & backend (e.g. packages/db)
 
 ---
 
@@ -52,6 +53,13 @@ bun create hono@latest apps/api
 # 🎉 Copied project files
 # Get started with: cd apps/api
 cd apps/api
+```
+
+Update Package.json for each project to match package.json in project root
+```jsonc:apps/api/package.json
+{
+  "name": "hono-better-auth-api",
+// ...
 ```
 
 #### Create Database with wrangler
@@ -153,18 +161,29 @@ bun add better-auth
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
+import * as schema from "../db/auth-schema"; 
 
-export const authConfig = (d1: D1Database) => ({
-  database: drizzleAdapter(drizzle(d1), {
-    provider: "sqlite",
-  }),
-} as const);
 
-export const auth = betterAuth(authConfig({} as D1Database));
+export const getAuth = (d1: D1Database) => {
+  const db = drizzle(d1, { schema });
+  
+  return betterAuth({
+    database: drizzleAdapter(db, {
+      provider: "sqlite",
+      schema: schema,
+    }),
+  });
+};
+```
+
+```apps/api/src/lib/auth-cli.ts
+import { getAuth } from "./auth";
+
+export const auth = getAuth({} as D1Database);
 ```
 
 ```bash
-bun x auth@latest generate --output src/db/auth-schema.ts
+bun x auth@latest generate --config src/lib/auth-cli.ts --output src/db/auth-schema.ts
 ```
 
 ```ts:apps/api/drizzle.config.ts
@@ -199,35 +218,59 @@ You can see tables like "account", "session", etc.
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
+import * as schema from "../db/auth-schema"; 
 
-export const authConfig = (d1: D1Database) => ({
-  database: drizzleAdapter(drizzle(d1), {
-    provider: "sqlite",
-  }),
-  // Add emailAndPassword Option Here
-  emailAndPassword: {
-    enabled: true,
-  },
-});
 
-export const auth = betterAuth(authConfig({} as D1Database));
+export const getAuth = (d1: D1Database) => {
+  const db = drizzle(d1, { schema });
+  
+  return betterAuth({
+    database: drizzleAdapter(db, {
+      provider: "sqlite",
+      schema: schema,
+    }),
+    // Add lines below
+    emailAndPassword: {
+      enabled: true,
+    },
+    baseURL: "http://localhost:8787/api/auth",
+    trustedOrigins: ["http://localhost:5173"]
+  });
+};
 ```
 
 ```ts:apps/api/src/index.ts
 // apps/api/src/index.ts
 
 import { Hono } from 'hono'
-import { auth } from "./lib/auth"; 
+import { cors } from 'hono/cors'
+import { getAuth } from "./lib/auth";  
 
-const app = new Hono()
+const app = new Hono<{ Bindings: { DB: D1Database } }>()
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+app.use("/api/auth/*", cors({
+  origin: "http://localhost:5173",
+  credentials: true,
+}))
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
+  const auth = getAuth(c.env.DB);
+  return auth.handler(c.req.raw);
+});
 
-export default app
+export default app;
+```
+
+Add Node.js compatability flag (did not work w/o this option)
+```jsonc:apps/api/wrangler.jsonc
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "api",
+	"main": "src/index.ts",
+ "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  //...
 ```
 
 ### App
@@ -248,20 +291,193 @@ bun x create-react-router@latest apps/app
  #     ✔  Dependencies installed
  # done   That's it!
  #        Enter your project directory using cd ./apps/app
+cd apps/app
 ```
 
 Update Package.json for each project to match package.json in project root
-```jsonc:apps/api/package.json
-{
-  "name": "hono-better-auth-api",
-// ...
-```
 ```jsonc:apps/app/package.json
 {
   "name": "hono-better-auth-app",
 // ...
 ```
 
+For React-Router and BetterAuth Integration, refer to:
+https://better-auth.com/docs/integrations/react-router
+
+```bash
+bun add better-auth
+```
+
+```env:apps/api/.env
+# Add Random Strings longer than 32 characters to encrypt
+BETTER_AUTH_SECRET=
+```
+
+
+```ts:apps/app/app/routes/api.auth.$.ts
+import { auth } from '../lib/auth.server'
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router"
+
+export async function loader({ request }: LoaderFunctionArgs) {
+    return auth.handler(request)
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+    return auth.handler(request)
+}
+```
+
+```ts:apps/app/app/lib/auth.ts
+// apps/app/app/lib/auth.ts
+
+import { createAuthClient } from "better-auth/react";
+
+export const authClient = createAuthClient({
+    baseURL: "http://localhost:8787/api/auth" // Set Backend URL
+});
+```
+
+```ts:apps/app/app/routes/signup.tsx
+import { Form } from "react-router"
+import { useState } from "react"
+import { authClient } from "~/lib/auth"
+
+export default function SignUp() {
+  const [email, setEmail] = useState("")
+  const [name, setName] = useState("")
+  const [password, setPassword] = useState("")
+
+  const signUp = async () => {
+    await authClient.signUp.email(
+      {
+        email,
+        password,
+        name,
+      },
+      {
+        onRequest: (ctx) => {
+          // show loading state
+        },
+        onSuccess: (ctx) => {
+          // redirect to home
+        },
+        onError: (ctx) => {
+          alert(ctx.error)
+        },
+      },
+    )
+  }
+
+  return (
+    <div>
+      <h2>
+        Sign Up
+      </h2>
+      <Form
+        onSubmit={signUp}
+      >
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Name"
+        />
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+        />
+        <button
+          type="submit"
+        >
+          Sign Up
+        </button>
+      </Form>
+    </div>
+  )
+}
+```
+
+```ts:apps/app/app/routes/signin.tsx
+import { Form } from "react-router"
+import { useState } from "react"
+import { authClient } from "~/lib/auth"
+
+export default function SignIn() {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+
+  const signIn = async () => {
+    await authClient.signIn.email(
+      {
+        email,
+        password,
+      },
+      {
+        onRequest: (ctx) => {
+          // show loading state
+        },
+        onSuccess: (ctx) => {
+          // redirect to home
+        },
+        onError: (ctx) => {
+          alert(ctx.error)
+        },
+      },
+    )
+  }
+
+  return (
+    <div>
+      <h2>
+        Sign In
+      </h2>
+      <Form
+        onSubmit={signIn}
+      >
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+        />
+        <button
+          type="submit"
+        >
+          Sign In
+        </button>
+      </Form>
+    </div>
+  )
+}
+```
+
+```tsx:apps/app/app/welcome/welcome.tsx
+import SignIn from "~/routes/signin";
+import SignUp from "~/routes/signup";
+
+export function Welcome() {
+  return (
+    <main>
+      <SignUp />
+      <SignIn />
+    </main>
+  );
+}
+```
 
 ### Rabbit Holes (引っかかったポイントたち)
 - dotenv package is not compatible with　wrangler
