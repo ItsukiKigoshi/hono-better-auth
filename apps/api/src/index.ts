@@ -18,7 +18,7 @@ app.use('*', async (c, next) => {
 })
 
 
-app.get('/', (c) => c.text('Hono-Better-Auth-API'))
+app.get('/', (c) => c.text('Hono-Better-Auth-API v0.0.0'))
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => {
   const auth = getAuth(c.env);
