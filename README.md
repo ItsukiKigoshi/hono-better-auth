@@ -132,7 +132,8 @@ CLOUDFLARE_D1_TOKEN={My profile -> API Tokens and create token with D1 edit perm
 
 Update Database based on schema
 ```bash
-bun x drizzle-kit push
+bunx drizzle-kit generate
+bunx wrangler d1 migrations apply hono-better-auth-db --local
 ```
 
 Generate Types
@@ -157,7 +158,7 @@ bun add better-auth
 
 ```ts:apps/api/src/lib/auth.ts
 // apps/api/src/lib/auth.ts
- 
+
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
@@ -172,6 +173,8 @@ export const getAuth = (d1: D1Database) => {
       provider: "sqlite",
       schema: schema,
     }),
+    baseURL: "http://localhost:8787/api/auth",
+    trustedOrigins: ["http://localhost:5173"]
   });
 };
 ```
@@ -201,7 +204,8 @@ export default defineConfig({
 
 Update Database based on new auth schema
 ```bash
-bun x drizzle-kit push
+bunx drizzle-kit generate
+bunx wrangler d1 migrations apply hono-better-auth-db --local
 ```
 
 To confirm the table generation, run:
@@ -229,7 +233,6 @@ export const getAuth = (d1: D1Database) => {
       provider: "sqlite",
       schema: schema,
     }),
-    // Add lines below
     emailAndPassword: {
       enabled: true,
     },
@@ -477,6 +480,23 @@ export function Welcome() {
     </main>
   );
 }
+```
+
+### Debug
+```jsonc:apps/api/wrangler.jsonc
+{
+// ...
+	"d1_databases": [
+		{
+		  // Add the line below
+			"migrations_dir": "drizzle"
+		}
+	]
+```
+
+```bash
+bunx drizzle-kit generate
+bunx wrangler d1 migrations apply hono-better-auth-db --local
 ```
 
 ### Rabbit Holes (引っかかったポイントたち)

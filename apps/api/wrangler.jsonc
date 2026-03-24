@@ -1,8 +1,8 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
+  "$schema": "node_modules/wrangler/config-schema.json",
 	"name": "api",
 	"main": "src/index.ts",
- "compatibility_flags": [
+	"compatibility_flags": [
     "nodejs_compat"
   ],
 	"compatibility_date": "2026-03-24",
@@ -10,7 +10,8 @@
 		{
 			"binding": "hono_better_auth_db",
 			"database_name": "hono-better-auth-db",
-			"database_id": "5113ae39-19b2-49d7-883d-d562d7eae8f1"
+			"database_id": "5113ae39-19b2-49d7-883d-d562d7eae8f1",
+			"migrations_dir": "drizzle"
 		}
 	]
 	// "compatibility_flags": [

@@ -5,6 +5,9 @@ import * as schema from "../db/auth-schema";
 
 
 export const getAuth = (d1: D1Database) => {
+  if (!d1) {
+    throw new Error("D1 database binding is missing. Check wrangler.jsonc or environment.");
+  }
   const db = drizzle(d1, { schema });
   
   return betterAuth({
