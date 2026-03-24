@@ -3,8 +3,7 @@
 This is an example full-stack monorepo app for authentication with Email OTP + Passkey (Password-less).
 
 ## Spec
-- Package Manager: Pnpm
-  - Tried Bun, but caught Node.js compatibility issues with wranglar
+- Package Manager: Bun
 - API: Hono
   - ORM: Drizzle-ORM
   - DB: Cloudflare D1 (SQLite on Local Environment)
@@ -47,7 +46,7 @@ pnpm create hono@latest apps/api
 # ✔ Using target directory … apps/api
 # ✔ Which template do you want to use? cloudflare-workers
 # ✔ Do you want to install project dependencies? Yes
-# ✔ Which package manager do you want to use? bun
+# ✔ Which package manager do you want to use? pnpm
 # ✔ Cloning the template
 # ✔ Installing project dependencies
 # 🎉 Copied project files
@@ -57,8 +56,8 @@ cd apps/api
 
 #### Create Database with wrangler
 ```bash
-bunx wrangler d1 create hono-better-auth-db
-bunx wrangler d1 execute hono-better-auth-db --local --command "SELECT 1;" # This dummy command creates D1 Database locally
+pnpm dlx wrangler d1 create hono-better-auth-db
+pnpm dlx wrangler d1 execute hono-better-auth-db --local --command "SELECT 1;" # This dummy command creates D1 Database locally
 ```
 
 #### Add Drizzle
@@ -67,7 +66,7 @@ Database is required for user management by BetterAuth.
 https://orm.drizzle.team/docs/get-started/d1-new
 
 ```bash
-pnpm add drizzle-orm wrangler dotenv @libsql/client
+pnpm add drizzle-orm wrangler @libsql/client
 pnpm add -D drizzle-kit tsx @types/node
 ```
 
@@ -93,10 +92,9 @@ https://ygwyg.org/local-d1-drizzle-studio
 echo "LOCAL_DB_PATH=$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print0 | xargs -0 ls -t | head -1)" >> .env
 ```
 
-```apps/api/drizzle.config.ts
+```ts:apps/api/drizzle.config.ts
 // apps/api/drizzle.config.ts
 
-import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
@@ -116,8 +114,14 @@ export default defineConfig({
 
 Update Database based on schema
 ```bash
-bunx drizzle-kit push
+pnpm exec drizzle-kit push
 ```
+
+To confirm the table generation, run:
+```bash
+pnpm exec drizzle-kit studio
+```
+You can see a table named "users_table".
 
 #### Initialise Bette-Auth
 
@@ -125,14 +129,16 @@ Follow the steps indicated here:
 https://better-auth.com/docs/installation
 
 ```bash
-bun add better-auth
+pnpm add better-auth
 ```
 
 
-For Local sqlite connection with libsql and drizzle, refer to: https://orm.drizzle.team/docs/get-started-sqlite#libsql
+For Local sqlite connection with libsql and drizzle, refer to:
+https://orm.drizzle.team/docs/get-started-sqlite#libsql
+
 ```ts:apps/api/src/lib/auth.ts
 // apps/api/src/lib/auth.ts
-
+ 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/libsql";
@@ -153,7 +159,7 @@ export const auth = betterAuth({
 ```
 
 ```bash
-bun x auth@latest generate --output src/db/auth-schema.ts
+pnpm dlx auth@latest generate --output src/db/auth-schema.ts
 ```
 
 ```ts:apps/api/drizzle.config.ts
@@ -163,7 +169,7 @@ import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
   out: './drizzle',
-  // Add the line below for BetterAuth schema
+  // Update the line below for BetterAuth schema
   schema: ['./src/db/schema.ts', './src/db/auth-schema.ts'],
   dialect: 'sqlite',
   dbCredentials: {
@@ -174,12 +180,12 @@ export default defineConfig({
 
 Update Database based on new auth schema
 ```bash
-bunx drizzle-kit push
+pnpm exec drizzle-kit push
 ```
 
 To confirm the table generation, run:
 ```bash
-bunx drizzle-kit studio
+pnpm exec drizzle-kit studio
 ```
 You can see tables like "account", "session", etc.
 
