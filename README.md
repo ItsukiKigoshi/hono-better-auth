@@ -143,6 +143,21 @@ CLOUDFLARE_DATABASE_ID=
 CLOUDFLARE_D1_TOKEN=
 ```
 
+Add migrations_dir in wrangler.jsonc
+```jsonc:apps/api/wrangler.jsonc
+// apps/api/wrangler.jsonc
+
+{
+// ...
+	"d1_databases": [
+		{
+		  // Add the line below
+			"migrations_dir": "drizzle"
+		}
+	]
+```
+
+
 Update Database based on schema
 ```bash
 # Use these 2 commands instead of drizzle-kit push for 
@@ -161,7 +176,7 @@ bun x drizzle-kit studio
 ```
 You can see a table named "users_table".
 
-#### Initialise Bette-Auth
+#### Initialise Better-Auth
 
 Follow the steps indicated here:
 https://better-auth.com/docs/installation
@@ -483,18 +498,6 @@ export function Welcome() {
     </main>
   );
 }
-```
-
-### Debug
-```jsonc:apps/api/wrangler.jsonc
-{
-// ...
-	"d1_databases": [
-		{
-		  // Add the line below
-			"migrations_dir": "drizzle"
-		}
-	]
 ```
 
 ```bash
