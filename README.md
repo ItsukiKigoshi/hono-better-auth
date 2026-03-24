@@ -21,6 +21,10 @@ Step-by-Step!
 ---
 
 ## What's Done
+### Rabbit Holes (引っかかったポイントたち)
+  - dotenv package is not compatible with　wrangler
+    - https://developers.cloudflare.com/workers/configuration/environment-variables/#local-development-with-secrets
+
 ### Configure package.json in project root for monorepo
 ```jsonc:package.json
 // package.json
@@ -508,8 +512,4 @@ bunx drizzle-kit generate
 bunx wrangler d1 migrations apply hono-better-auth-db --local
 ```
 
-
-
-### Rabbit Holes (引っかかったポイントたち)
-  - dotenv package is not compatible with　wrangler
-    - https://developers.cloudflare.com/workers/configuration/environment-variables/#local-development-with-secrets
+### Optimise for production
