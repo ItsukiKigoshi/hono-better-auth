@@ -15,6 +15,13 @@
       "when": 1774370629966,
       "tag": "0001_boring_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774389721828,
+      "tag": "0002_cynical_charles_xavier",
+      "breakpoints": true
     }
   ]
 }
