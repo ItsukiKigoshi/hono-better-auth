@@ -761,3 +761,5 @@ bun x auth@latest generate --config src/lib/auth-cli.ts --output src/db/auth-sch
 bunx drizzle-kit generate
 bunx wrangler d1 migrations apply hono-better-auth-db --local
 ```
+
+Decided to Create New Repo
