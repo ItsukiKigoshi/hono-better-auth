@@ -5,10 +5,10 @@ This is an example full-stack monorepo app for authentication with Email OTP + P
 ## Spec
 - Runtime/Package Manager: Bun
 - API: Hono
-  - ORM: Drizzle-ORM
-  - DB: Cloudflare D1 (SQLite on Local Environment)
-  - Auth: Better-Auth
-- App: Vite + React
+- ORM: Drizzle-ORM
+- DB: Cloudflare D1 (SQLite on Local Environment)
+- Auth: Better-Auth
+- App: Vite + React Router
 
 ## TODO
 Step-by-Step!
