@@ -1,5 +1,5 @@
 {
-  "name": "api",
+  "name": "hono-better-auth-api",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",

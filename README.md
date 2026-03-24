@@ -233,8 +233,35 @@ export default app
 ### App
 ```bash
 cd ../.. # cd to project root if applicable
-
 ```
+
+```bash
+bun x create-react-router@latest apps/app
+ #        create-react-router v7.13.2
+ #     ◼  Directory: Using apps/app as project directory
+ #     ◼  Using default template See https://github.com/remix-run/react-router-templates for more
+ #     ✔  Template copied
+ #  git   Initialize a new git repository?
+ #        No
+ # deps   Install dependencies with bun?
+ #        Yes
+ #     ✔  Dependencies installed
+ # done   That's it!
+ #        Enter your project directory using cd ./apps/app
+```
+
+Update Package.json for each project to match package.json in project root
+```jsonc:apps/api/package.json
+{
+  "name": "hono-better-auth-api",
+// ...
+```
+```jsonc:apps/app/package.json
+{
+  "name": "hono-better-auth-app",
+// ...
+```
+
 
 ### Rabbit Holes (引っかかったポイントたち)
 - dotenv package is not compatible with　wrangler
