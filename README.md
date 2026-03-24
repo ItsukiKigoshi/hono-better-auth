@@ -3,7 +3,7 @@
 This is an example full-stack monorepo app for authentication with Email OTP + Passkey (Password-less).
 
 ## Spec
-- Package Manager: Bun
+- Runtime/Package Manager: Bun
 - API: Hono
   - ORM: Drizzle-ORM
   - DB: Cloudflare D1 (SQLite on Local Environment)
@@ -26,9 +26,9 @@ Step-by-Step!
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "dev:api": "pnpm--filter hono-better-auth-api dev",
-    "dev:app": "pnpm--filter hono-better-auth-app dev",
-    "dev": "pnpm--filter \"*\" dev"
+    "dev:api": "bun --filter hono-better-auth-api dev",
+    "dev:app": "bun --filter hono-better-auth-app dev",
+    "dev": "bun --filter \"*\" dev"
   },
   "workspaces": [
     "apps/*"
@@ -41,12 +41,12 @@ Step-by-Step!
 ### API
 #### Initialisation
 ```bash
-pnpm create hono@latest apps/api
+bun create hono@latest apps/api
 # create-hono version 0.19.4
 # ✔ Using target directory … apps/api
 # ✔ Which template do you want to use? cloudflare-workers
 # ✔ Do you want to install project dependencies? Yes
-# ✔ Which package manager do you want to use? pnpm
+# ✔ Which package manager do you want to use? bun
 # ✔ Cloning the template
 # ✔ Installing project dependencies
 # 🎉 Copied project files
@@ -56,9 +56,10 @@ cd apps/api
 
 #### Create Database with wrangler
 ```bash
-pnpm dlx wrangler d1 create hono-better-auth-db
-pnpm dlx wrangler d1 execute hono-better-auth-db --local --command "SELECT 1;" # This dummy command creates D1 Database locally
+bun x wrangler d1 create hono-better-auth-db
+bun x wrangler d1 execute hono-better-auth-db --local --command "SELECT 1;" # This dummy command creates D1 Database locally
 ```
+
 
 #### Add Drizzle
 Database is required for user management by BetterAuth.
@@ -66,8 +67,8 @@ Database is required for user management by BetterAuth.
 https://orm.drizzle.team/docs/get-started/d1-new
 
 ```bash
-pnpm add drizzle-orm wrangler @libsql/client
-pnpm add -D drizzle-kit tsx @types/node
+bun add drizzle-orm wrangler
+bun add -D drizzle-kit
 ```
 
 Create Database Schema.
@@ -101,25 +102,39 @@ export default defineConfig({
   out: './drizzle',
   schema: './src/db/schema.ts',
   dialect: 'sqlite',
-  // Comment out Configulations for remote D1
-  // driver: 'd1-http',
+  driver: 'd1-http',
   dbCredentials: {
-      url: process.env.LOCAL_DB_PATH!,
-  //   accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
-  //   databaseId: process.env.CLOUDFLARE_DATABASE_ID!,
-  //   token: process.env.CLOUDFLARE_D1_TOKEN!,
+    url: process.env.LOCAL_DB_PATH ?? '', // Use Local Database if LOCAL_DB_PATH is provided in .env
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+    databaseId: process.env.CLOUDFLARE_DATABASE_ID!,
+    token: process.env.CLOUDFLARE_D1_TOKEN!,
   },
 });
 ```
 
+```env:apps/api/.env
+LOCAL_DB_PATH= # Generated above with echo command
+
+# Add 3 lines below manually from Cloudflare Dashboard
+# Refer to: https://orm.drizzle.team/docs/guides/d1-http-with-drizzle-kit
+CLOUDFLARE_ACCOUNT_ID={Workers & Pages -> Overview -> copy Account ID from the right sidebar.}
+CLOUDFLARE_DATABASE_ID={also indicated in wrangler.jsonc}
+CLOUDFLARE_D1_TOKEN={My profile -> API Tokens and create token with D1 edit permissions}
+```
+
 Update Database based on schema
 ```bash
-pnpm exec drizzle-kit push
+bun x drizzle-kit push
+```
+
+Generate Types
+```bash
+bun x wrangler types
 ```
 
 To confirm the table generation, run:
 ```bash
-pnpm exec drizzle-kit studio
+bun x drizzle-kit studio
 ```
 You can see a table named "users_table".
 
@@ -129,37 +144,27 @@ Follow the steps indicated here:
 https://better-auth.com/docs/installation
 
 ```bash
-pnpm add better-auth
+bun add better-auth
 ```
-
-
-For Local sqlite connection with libsql and drizzle, refer to:
-https://orm.drizzle.team/docs/get-started-sqlite#libsql
 
 ```ts:apps/api/src/lib/auth.ts
 // apps/api/src/lib/auth.ts
  
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/d1";
 
-const client = createClient({
-  url: `file:${process.env.LOCAL_DB_PATH!}`,
-});
+export const authConfig = (d1: D1Database) => ({
+  database: drizzleAdapter(drizzle(d1), {
+    provider: "sqlite",
+  }),
+} as const);
 
-const db = drizzle(client);
-
-export const auth = betterAuth({
-    database: drizzleAdapter(db, {
-        provider: "sqlite",
-    }),
-});
-
+export const auth = betterAuth(authConfig({} as D1Database));
 ```
 
 ```bash
-pnpm dlx auth@latest generate --output src/db/auth-schema.ts
+bun x auth@latest generate --output src/db/auth-schema.ts
 ```
 
 ```ts:apps/api/drizzle.config.ts
@@ -168,53 +173,49 @@ pnpm dlx auth@latest generate --output src/db/auth-schema.ts
 import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
-  out: './drizzle',
+  // ...
   // Update the line below for BetterAuth schema
   schema: ['./src/db/schema.ts', './src/db/auth-schema.ts'],
-  dialect: 'sqlite',
-  dbCredentials: {
-      url: process.env.LOCAL_DB_PATH!,
-  },
+  // ...
 });
 ```
 
 Update Database based on new auth schema
 ```bash
-pnpm exec drizzle-kit push
+bun x drizzle-kit push
 ```
 
 To confirm the table generation, run:
 ```bash
-pnpm exec drizzle-kit studio
+bun x drizzle-kit studio
 ```
 You can see tables like "account", "session", etc.
 
 #### Add emailAndPassword Option in BetterAuth
 
 ```ts:apps/api/src/lib/auth.ts
+// apps/api/src/lib/auth.ts
+
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/d1";
 
-const client = createClient({
-  url: `file:${process.env.LOCAL_DB_PATH!}`,
+export const authConfig = (d1: D1Database) => ({
+  database: drizzleAdapter(drizzle(d1), {
+    provider: "sqlite",
+  }),
+  // Add emailAndPassword Option Here
+  emailAndPassword: {
+    enabled: true,
+  },
 });
 
-const db = drizzle(client);
-
-export const auth = betterAuth({
-    database: drizzleAdapter(db, {
-        provider: "sqlite",
-    }),
-    // Add emailAndPassword Option Here
-    emailAndPassword: {
-      enabled: true,
-    },
-});
+export const auth = betterAuth(authConfig({} as D1Database));
 ```
 
 ```ts:apps/api/src/index.ts
+// apps/api/src/index.ts
+
 import { Hono } from 'hono'
 import { auth } from "./lib/auth"; 
 
@@ -228,3 +229,13 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 export default app
 ```
+
+### App
+```bash
+cd ../.. # cd to project root if applicable
+
+```
+
+### Rabbit Holes (引っかかったポイントたち)
+- dotenv package is not compatible with　wrangler
+  - https://developers.cloudflare.com/workers/configuration/environment-variables/#local-development-with-secrets
