@@ -12,7 +12,8 @@ This is an example full-stack monorepo app for authentication with Email OTP + P
 
 ## TODO
 Step-by-Step!
-- [ ] Email + Password with Better-Auth
+- [x] Email + Password with Better-Auth
+  - [ ] Conditional Rendering (Show content only after Login)
 - [ ] Passkey with Better-Auth
 - [ ] Conditional Rendering with Better-Auth
 - [ ] Share Drizzle Schema across frontend & backend (e.g. packages/db)
@@ -56,15 +57,19 @@ cd apps/api
 ```
 
 Update Package.json for each project to match package.json in project root
+Also, configure ``bun dev`` to run locally by default
 ```jsonc:apps/api/package.json
 {
   "name": "hono-better-auth-api",
-// ...
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "dev:remote": "wrangler dev --remote",
 ```
 
 #### Create Database with wrangler
 ```bash
-bun x wrangler d1 create hono-better-auth-db
+bun x wrangler d1 create hono-better-auth-db --local
 bun x wrangler d1 execute hono-better-auth-db --local --command "SELECT 1;" # This dummy command creates D1 Database locally
 ```
 
@@ -106,32 +111,39 @@ echo "LOCAL_DB_PATH=$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -typ
 
 import { defineConfig } from 'drizzle-kit';
 
+const isLocal = !!process.env.LOCAL_DB_PATH;
+
 export default defineConfig({
   out: './drizzle',
-  schema: './src/db/schema.ts',
+  schema: ['./src/db/schema.ts', './src/db/auth-schema.ts'],
   dialect: 'sqlite',
-  driver: 'd1-http',
-  dbCredentials: {
-    url: process.env.LOCAL_DB_PATH ?? '', // Use Local Database if LOCAL_DB_PATH is provided in .env
-    accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
-    databaseId: process.env.CLOUDFLARE_DATABASE_ID!,
-    token: process.env.CLOUDFLARE_D1_TOKEN!,
-  },
+  driver: isLocal ? undefined : 'd1-http', 
+  dbCredentials: isLocal 
+    ? {
+        url: process.env.LOCAL_DB_PATH,
+      }
+    : {
+        accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+        databaseId: process.env.CLOUDFLARE_DATABASE_ID!,
+        token: process.env.CLOUDFLARE_D1_TOKEN!,
+      },
 });
 ```
 
+Configure .env for remote database
+Refer to: https://orm.drizzle.team/docs/guides/d1-http-with-drizzle-kit
 ```env:apps/api/.env
 LOCAL_DB_PATH= # Generated above with echo command
 
 # Add 3 lines below manually from Cloudflare Dashboard
-# Refer to: https://orm.drizzle.team/docs/guides/d1-http-with-drizzle-kit
-CLOUDFLARE_ACCOUNT_ID={Workers & Pages -> Overview -> copy Account ID from the right sidebar.}
-CLOUDFLARE_DATABASE_ID={also indicated in wrangler.jsonc}
-CLOUDFLARE_D1_TOKEN={My profile -> API Tokens and create token with D1 edit permissions}
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_DATABASE_ID=
+CLOUDFLARE_D1_TOKEN=
 ```
 
 Update Database based on schema
 ```bash
+# Use these 2 commands instead of drizzle-kit push for 
 bunx drizzle-kit generate
 bunx wrangler d1 migrations apply hono-better-auth-db --local
 ```
@@ -166,13 +178,12 @@ import * as schema from "../db/auth-schema";
 
 
 export const getAuth = (d1: D1Database) => {
-  const db = drizzle(d1, { schema });
-  
   return betterAuth({
-    database: drizzleAdapter(db, {
+    database: drizzleAdapter(drizzle(d1, { schema }), {
       provider: "sqlite",
       schema: schema,
     }),
+    },
     baseURL: "http://localhost:8787/api/auth",
     trustedOrigins: ["http://localhost:5173"]
   });
@@ -226,13 +237,12 @@ import * as schema from "../db/auth-schema";
 
 
 export const getAuth = (d1: D1Database) => {
-  const db = drizzle(d1, { schema });
-  
   return betterAuth({
-    database: drizzleAdapter(db, {
+    database: drizzleAdapter(drizzle(d1, { schema }), {
       provider: "sqlite",
       schema: schema,
     }),
+    // Add the line beow
     emailAndPassword: {
       enabled: true,
     },
@@ -249,7 +259,9 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { getAuth } from "./lib/auth";  
 
-const app = new Hono<{ Bindings: { DB: D1Database } }>()
+const app = new Hono<{ Bindings: { hono_better_auth_db: D1Database } }>()
+
+app.get('/', (c) => c.text('HonoBetter-Auth-API'))
 
 app.use("/api/auth/*", cors({
   origin: "http://localhost:5173",
@@ -257,7 +269,7 @@ app.use("/api/auth/*", cors({
 }))
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => {
-  const auth = getAuth(c.env.DB);
+  const auth = getAuth(c.env.hono_better_auth_db);
   return auth.handler(c.req.raw);
 });
 
@@ -267,9 +279,7 @@ export default app;
 Add Node.js compatability flag (did not work w/o this option)
 ```jsonc:apps/api/wrangler.jsonc
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "api",
-	"main": "src/index.ts",
+  // ...
  "compatibility_flags": [
     "nodejs_compat"
   ],
@@ -314,20 +324,6 @@ bun add better-auth
 ```env:apps/api/.env
 # Add Random Strings longer than 32 characters to encrypt
 BETTER_AUTH_SECRET=
-```
-
-
-```ts:apps/app/app/routes/api.auth.$.ts
-import { auth } from '../lib/auth.server'
-import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router"
-
-export async function loader({ request }: LoaderFunctionArgs) {
-    return auth.handler(request)
-}
-
-export async function action({ request }: ActionFunctionArgs) {
-    return auth.handler(request)
-}
 ```
 
 ```ts:apps/app/app/lib/auth.ts
@@ -498,6 +494,8 @@ export function Welcome() {
 bunx drizzle-kit generate
 bunx wrangler d1 migrations apply hono-better-auth-db --local
 ```
+
+
 
 ### Rabbit Holes (引っかかったポイントたち)
 - dotenv package is not compatible with　wrangler

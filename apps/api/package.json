@@ -2,8 +2,8 @@
   "name": "hono-better-auth-api",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "dev:local": "wrangler dev --remote=false",
+    "dev": "wrangler dev --local",
+    "dev:remote": "wrangler dev --remote",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
