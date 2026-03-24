@@ -18,7 +18,7 @@ export const getAuth = (env: Env) => {
     emailAndPassword: {
       enabled: true,
     },
-    baseURL: `${env.API_URL}/api/auth`,
+    baseURL: `${env.API_URL?.replace(/\/$/, "")}/api/auth`,
     trustedOrigins: [env.APP_URL],
   });
 };

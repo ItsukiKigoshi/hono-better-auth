@@ -5,7 +5,12 @@ import { drizzle } from "drizzle-orm/d1"
 import { getAuth } from "./lib/auth"
 import { favoritesTable } from "./db/schema"
 
-const app = new Hono<{ Bindings: Required<Env> }>() 
+type Variables = {
+  db: ReturnType<typeof drizzle>;
+  auth: ReturnType<typeof getAuth>;
+};
+
+const app = new Hono<{ Bindings: Required<Env>; Variables: Variables }>();
 
 app.use('*', async (c, next) => {  
   const corsMiddleware = cors({
@@ -17,17 +22,27 @@ app.use('*', async (c, next) => {
   return corsMiddleware(c, next)
 })
 
+app.use('*', async (c, next) => {
+  const db = drizzle(c.env.hono_better_auth_db);
+  const auth = getAuth(c.env);
+  
+  c.set('db', db);
+  c.set('auth', auth);
+  
+  await next();
+});
+
 
 app.get('/', (c) => c.text('Hono-Better-Auth-API v0.0.0'))
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => {
-  const auth = getAuth(c.env);
+  const auth = c.get('auth');
   return auth.handler(c.req.raw);
 });
 
 app.get("/favorites", async (c) => {
-  const db = drizzle(c.env.hono_better_auth_db);
-  const auth = getAuth(c.env);
+  const db = c.get('db');
+  const auth = c.get('auth');
   
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
   if (!session) return c.json({ error: "Unauthorized" }, 401);
@@ -40,8 +55,8 @@ app.get("/favorites", async (c) => {
 });
 
 app.post("/favorites", async (c) => {
-  const db = drizzle(c.env.hono_better_auth_db);
-  const auth = getAuth(c.env);
+  const db = c.get('db');
+  const auth = c.get('auth');
   
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
   if (!session) return c.json({ error: "Unauthorized" }, 401);
