@@ -9,6 +9,7 @@ export const getAuth = (env: Env) => {
       provider: "sqlite",
       schema: schema,
     }),
+    secret: env.BETTER_AUTH_SECRET, 
     emailAndPassword: {
       enabled: true,
     },
