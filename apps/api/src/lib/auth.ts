@@ -10,9 +10,6 @@ export const getAuth = (env: Env) => {
       schema: schema,
     }),
     secret: env.BETTER_AUTH_SECRET, 
-    advanced: {
-       cookiePrefix: "__Secure-", 
-     },
      cookie: {
        sameSite: "none", 
        secure: true,
