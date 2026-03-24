@@ -261,7 +261,7 @@ import { getAuth } from "./lib/auth";
 
 const app = new Hono<{ Bindings: { hono_better_auth_db: D1Database } }>()
 
-app.get('/', (c) => c.text('HonoBetter-Auth-API'))
+app.get('/', (c) => c.text('Hono-Better-Auth-API'))
 
 app.use("/api/auth/*", cors({
   origin: "http://localhost:5173",
