@@ -16,7 +16,9 @@ Step-by-Step!
 - [ ] Passkey with Better-Auth
 - [ ] Conditional Rendering with Better-Auth
 
-## Done
+---
+
+## What's Done
 
 ### API
 #### Initialisation
@@ -54,6 +56,7 @@ Create Database Schema.
 This time, I will create a table for a platform where puople can share their favorite avation company.
 
 ```ts:apps/api/src/db/schema.ts
+// apps/api/src/db/schema.ts
 import { int, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const usersTable = sqliteTable("users_table", {
@@ -72,6 +75,8 @@ echo "LOCAL_DB_PATH=$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -typ
 ```
 
 ```apps/api/drizzle.config.ts
+// apps/api/drizzle.config.ts
+
 // import 'dotenv/config'; // Bun does not require dotenv https://bun.com/docs/runtime/environment-variables#dotenv
 import { defineConfig } from 'drizzle-kit';
 
@@ -107,6 +112,8 @@ bun add better-auth
 
 For Local sqlite connection with libsql and drizzle, refer to: https://orm.drizzle.team/docs/get-started-sqlite#libsql
 ```ts:apps/api/src/lib/auth.ts
+// apps/api/src/lib/auth.ts
+
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/libsql";
@@ -130,7 +137,9 @@ export const auth = betterAuth({
 bun x auth@latest generate --output src/db/auth-schema.ts
 ```
 
-```apps/api/drizzle.config.ts
+```ts:apps/api/drizzle.config.ts
+// apps/api/drizzle.config.ts
+
 import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
@@ -153,6 +162,5 @@ To confirm the table generation, run:
 ```bash
 bunx drizzle-kit studio
 ```
-
 You can see tables like "account", "session", etc.
 
