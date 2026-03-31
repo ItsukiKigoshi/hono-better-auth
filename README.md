@@ -2,6 +2,8 @@
 
 This is an example full-stack monorepo app for authentication with Email OTP + Passkey (Password-less).
 
+Cloudflare Workersでは実行時間10ms制限以内にパスワードのハッシュ値を計算することが出来ないと見えて断念. Email MagicLink + Passkeyで作り直したリポジトリは[こちら](https://github.com/ItsukiKigoshi/hono-auth)．
+
 ## Spec
 - Runtime/Package Manager: Bun
 - API: Hono
@@ -762,4 +764,4 @@ bunx drizzle-kit generate
 bunx wrangler d1 migrations apply hono-better-auth-db --local
 ```
 
-Decided to Create New Repo
+Decided to Create [New Repo](https://github.com/ItsukiKigoshi/hono-auth)
